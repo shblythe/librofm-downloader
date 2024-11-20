@@ -50,6 +50,9 @@ class Run : CliktCommand("run") {
 
 
   override fun run() {
+    if (dryRun) {
+      println("This is a dry run!")
+    }
     runBlocking {
       val libroFmApi = LibroApiHandler(
         dataDir = dataDir,
