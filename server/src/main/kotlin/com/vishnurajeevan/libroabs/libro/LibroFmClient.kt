@@ -35,6 +35,12 @@ class LibroApiHandler(
     })
     .build()
 
+  private val downloadClient = client.config {
+    install(HttpTimeout) {
+      requestTimeoutMillis = 5 * 60 * 1000
+    }
+  }
+
   private val libroAPI = ktorfit.createLibroAPI()
   private val authToken by lazy {
     File("$dataDir/token.txt").useLines { it.first() }
@@ -73,7 +79,7 @@ class LibroApiHandler(
     if (downloadedIsbns.isbns.contains(isbn)) {
       return
     }
-    client.use { httpClient ->
+    downloadClient.use { httpClient ->
       data.forEachIndexed { index, part ->
         if (!dryRun) {
           val url = part.url
