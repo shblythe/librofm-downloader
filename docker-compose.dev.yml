@@ -1,0 +1,11 @@
+services:
+  server:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./run/data:/data
+      - ./run/media:/media
+    env_file:
+      - .env
