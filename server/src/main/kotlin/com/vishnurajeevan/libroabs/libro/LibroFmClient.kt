@@ -56,15 +56,12 @@ class LibroApiHandler(
         it.write(tokenData.access_token!!)
       }
     }
-    println(tokenData)
   }
 
   suspend fun fetchLibrary(page: Int = 1) {
     val library = libroAPI.fetchLibrary("Bearer $authToken", page)
     if (library.audiobooks.isNotEmpty()) {
-      val text = Json.encodeToString(library)
-      println(text)
-      File("$dataDir/library.json").writeText(text)
+      File("$dataDir/library.json").writeText(Json.encodeToString<LibraryMetadata>(library))
     }
   }
 

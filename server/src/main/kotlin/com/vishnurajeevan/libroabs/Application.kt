@@ -55,16 +55,15 @@ class Run : CliktCommand("run") {
         dataDir = dataDir,
         client = HttpClient {
           install(Logging) {
-            logger = io.ktor.client.plugins.logging.Logger.DEFAULT
-            level = io.ktor.client.plugins.logging.LogLevel.INFO
+            logger = Logger.DEFAULT
+            level = LogLevel.INFO
           }
         },
         dryRun = dryRun
       )
       val tokenFile = File("$dataDir/token.txt")
       if (tokenFile.exists()) {
-        val token: String = tokenFile.useLines { it.first() }
-        println(token)
+        libroFmApi.fetchLibrary()
       } else {
         libroFmApi.fetchLoginData(libroFmUsername, libroFmPassword)
         libroFmApi.fetchLibrary()
