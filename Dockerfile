@@ -29,7 +29,7 @@ ENV \
     LIBRO_FM_USERNAME="" \
     LIBRO_FM_PASSWORD="" \
     DATA_DIR="" \
-    MEDIA_DIR="" \
+    MEDIA_DIR=""
 
 WORKDIR /app
 COPY scripts/run.sh ./
