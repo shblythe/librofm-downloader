@@ -26,10 +26,10 @@ ENV \
     # Fail if cont-init scripts exit with non-zero code.
     LIBRO_FM_USERNAME="" \
     LIBRO_FM_PASSWORD="" \
-    DRY_RUN = "" \
+    DRY_RUN="" \
     DATA_DIR="" \
     MEDIA_DIR="" \
-    VERBOSE = ""
+    VERBOSE=""
 
 WORKDIR /app
 COPY scripts/run.sh ./
