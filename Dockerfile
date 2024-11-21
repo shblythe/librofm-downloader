@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 eclipse-temurin:17-alpine AS build
+FROM --platform=linux/amd64 eclipse-temurin:21-alpine AS build
 ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dkotlin.incremental=false"
 WORKDIR /app
 
@@ -19,7 +19,7 @@ LABEL maintainer="Vishnu Rajeevan <github@vishnu.email>"
 
 RUN apk add --no-cache \
       curl \
-      openjdk17-jre \
+      openjdk21-jre \
       bash \
  && rm -rf /var/cache/* \
  && mkdir /var/cache/apk
