@@ -3,7 +3,7 @@
 ```
 services:
   librofm-downloader:
-    image: ghcr.io/burntcookie90/librofm-downloader:main
+    image: ghcr.io/burntcookie90/librofm-downloader:latest
     volumes:
       - /mnt/runtime/appdata/librofm-downloader:/data
       - /mnt/user/media/audiobooks:/media
