@@ -17,7 +17,6 @@ application {
 }
 
 dependencies {
-    implementation(projects.shared)
     implementation(libs.cardiologist)
     implementation(libs.clikt)
     implementation(libs.logback)

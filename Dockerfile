@@ -8,9 +8,7 @@ COPY gradle.properties ./gradle.properties
 RUN ./gradlew --version
 
 COPY build.gradle.kts ./
-COPY composeApp ./composeApp
 COPY server ./server
-COPY shared ./shared
 
 RUN ./gradlew :server:installDist
 
@@ -29,7 +27,8 @@ ENV \
     LIBRO_FM_USERNAME="" \
     LIBRO_FM_PASSWORD="" \
     DATA_DIR="" \
-    MEDIA_DIR=""
+    MEDIA_DIR="" \
+    VERBOSE = ""
 
 WORKDIR /app
 COPY scripts/run.sh ./

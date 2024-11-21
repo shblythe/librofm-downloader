@@ -21,7 +21,8 @@ import kotlin.io.path.outputStream
 class LibroApiHandler(
   private val client: HttpClient,
   private val dataDir: String,
-  private val dryRun: Boolean
+  private val dryRun: Boolean,
+  private val logger: (String) -> Unit = {}
 ) {
   private val ktorfit = Ktorfit.Builder()
     .baseUrl("https://libro.fm/")
@@ -46,12 +47,13 @@ class LibroApiHandler(
     File("$dataDir/token.txt").useLines { it.first() }
   }
   val downloadedIsbnsFile by lazy { File("$dataDir/downloaded.json") }
-  val downloadedIsbns get() =
-    if (downloadedIsbnsFile.exists()) {
-      Json.decodeFromString<DownloadedIsbns>(downloadedIsbnsFile.readText())
-    } else {
-      DownloadedIsbns(emptyList())
-    }
+  val downloadedIsbns
+    get() =
+      if (downloadedIsbnsFile.exists()) {
+        Json.decodeFromString<DownloadedIsbns>(downloadedIsbnsFile.readText())
+      } else {
+        DownloadedIsbns(emptyList())
+      }
 
   suspend fun fetchLoginData(username: String, password: String) {
     val tokenData = libroAPI.fetchLoginData(
@@ -61,6 +63,9 @@ class LibroApiHandler(
       File("$dataDir/token.txt").printWriter().use {
         it.write(tokenData.access_token!!)
       }
+    } else {
+      println("Login failed!")
+      throw IllegalArgumentException("failed login!")
     }
   }
 
@@ -77,12 +82,14 @@ class LibroApiHandler(
 
   suspend fun fetchAudioBook(isbn: String, data: List<DownloadPart>, targetDirectory: File) {
     if (downloadedIsbns.isbns.contains(isbn)) {
+      logger("$isbn has already been downloaded!")
       return
     }
     downloadClient.use { httpClient ->
       data.forEachIndexed { index, part ->
         if (!dryRun) {
           val url = part.url
+          logger("downloading part ${index + 1}")
           val destinationFile = File(targetDirectory, "part-$index.zip")
           val response = httpClient.get(url)
 
@@ -128,8 +135,10 @@ class LibroApiHandler(
     }
   }
 
+  fun hasIsbnBennDownloaded(isbn: String): Boolean = downloadedIsbns.isbns.contains(isbn)
+
   fun markIsbnAsDownloaded(isbn: String) {
-    println("marking $isbn as downloaded")
+    logger("marking $isbn as downloaded")
     val newIsbns = downloadedIsbns.isbns.toMutableList().apply {
       add(isbn)
     }

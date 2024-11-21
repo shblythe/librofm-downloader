@@ -15,15 +15,12 @@ import io.github.kevincianfarini.cardiologist.intervalPulse
 import io.ktor.client.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.server.application.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import java.io.File
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
 fun main(args: Array<String>) {
@@ -52,17 +49,24 @@ class Run : CliktCommand("run") {
   private val libroFmUsername by option("--libro-fm-username").required()
   private val libroFmPassword by option("--libro-fm-password").required()
 
-  val libroFmApi by lazy {
+  private val libroFmApi by lazy {
     LibroApiHandler(
       dataDir = dataDir,
       client = HttpClient {
         install(Logging) {
           logger = Logger.DEFAULT
-          level = LogLevel.INFO
+          level = if (verbose) LogLevel.BODY else LogLevel.INFO
         }
       },
-      dryRun = dryRun
+      dryRun = dryRun,
+      logger = logger
     )
+  }
+
+  private val logger :(String) -> Unit = {
+    if (verbose) {
+      println(it)
+    }
   }
 
   override fun run() {
@@ -71,11 +75,9 @@ class Run : CliktCommand("run") {
     }
     runBlocking {
       val tokenFile = File("$dataDir/token.txt")
-      if (tokenFile.exists()) {
-        libroFmApi.fetchLibrary()
-      } else {
+      if (!tokenFile.exists()) {
+        logger("Token file not found, logging in")
         libroFmApi.fetchLoginData(libroFmUsername, libroFmPassword)
-        libroFmApi.fetchLibrary()
       }
 
       libroFmApi.fetchLibrary()
@@ -83,7 +85,7 @@ class Run : CliktCommand("run") {
 
       launch {
         Clock.System.intervalPulse(1.hours).beat { scheduled, occurred ->
-          println("Checking library!")
+          logger("Checking library on pulse!")
           libroFmApi.fetchLibrary()
           processLibrary()
         }
@@ -107,6 +109,7 @@ class Run : CliktCommand("run") {
       val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
 
       if (!targetDir.exists()) {
+        logger("downloading ${book.title}")
         targetDir.mkdirs()
         val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
         libroFmApi.fetchAudioBook(
@@ -115,7 +118,7 @@ class Run : CliktCommand("run") {
           targetDirectory = targetDir
         )
       } else {
-        println("skipping ${book.title} as it exists on the filesystem!")
+        logger("skipping ${book.title} as it exists on the filesystem!")
         libroFmApi.markIsbnAsDownloaded(book.isbn)
       }
     }
@@ -124,13 +127,5 @@ class Run : CliktCommand("run") {
 
 fun Application.module(libroApi: LibroApiHandler) {
   routing {
-    get("/") {
-      call.respondText("Ktor: ${Greeting().greet()}")
-    }
-
-    post("/login") {
-      val data = call.receive<ApiLoginData>()
-      libroApi.fetchLoginData(data.username, data.password)
-    }
   }
 }
