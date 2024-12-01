@@ -9,3 +9,20 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+  - package-ecosystem: "gradle" # See documentation for possible values
+    directory: "" # Location of package manifests
+    schedule:
+      interval: "weekly"
+    registries: "*"
+    open-pull-requests-limit: 15
+    groups:
+      kotlin-ksp:
+        patterns:
+          - "org.jetbrains.kotlin:*"
+          - "org.jetbrains.kotlin.jvm"
+          - "com.google.devtools.ksp"
+registries:
+  maven-google:
+    type: "maven-repository"
+    url: "https://maven.google.com"
+    replaces-base: true
