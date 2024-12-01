@@ -1,6 +1,6 @@
 [versions]
 cardiologist = "0.3.0"
-clikt = "5.0.1"
+clikt = "5.0.2"
 junit = "4.13.2"
 ksp = "2.1.0-1.0.29"
 kotlin = "2.1.0"
