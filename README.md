@@ -21,4 +21,5 @@ services:
       - DRY_RUN=true 
       - VERBOSE=true
       - RENAME_CHAPTERS=true
+      - WRITE_TITLE_TAG=true #this one requires RENAME_CHAPTERS to be true as well
 ```
