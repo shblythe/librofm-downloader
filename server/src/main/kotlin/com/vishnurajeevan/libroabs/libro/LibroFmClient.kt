@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.tag.FieldKey
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
@@ -136,19 +138,36 @@ class LibroApiHandler(
   suspend fun renameChapters(
     title: String,
     tracks: List<Tracks>,
-    targetDirectory: File
+    targetDirectory: File,
+    writeTitleTag: Boolean
   )  = withContext(Dispatchers.IO) {
     if (tracks.any { it.chapter_title == null }) return@withContext
 
-    val newFilenames = tracks.sortedBy { it.number }
+    val sortedTracks = tracks.sortedBy { it.number }
+
+    val newFilenames = sortedTracks
       .map { track ->
         "${track.number.padToTotal(tracks.size)} - $title - ${track.chapter_title}"
       }
+
+    val trackTitles = sortedTracks
+      .map { track ->
+        "${track.number.padToTotal(tracks.size)} - ${track.chapter_title}"
+      }
+
     targetDirectory.listFiles()
       ?.sortedBy { it.nameWithoutExtension }
       ?.forEachIndexed({ index, file ->
         val newFilename = newFilenames[index]
-        file.renameTo(File(targetDirectory, "$newFilename.${file.extension}"))
+        val newFile = File(targetDirectory, "$newFilename.${file.extension}")
+        file.renameTo(newFile)
+
+        if (writeTitleTag) {
+          val audioFile = AudioFileIO.read(newFile)
+          val tag = audioFile.tag
+          tag.setField(FieldKey.TITLE, trackTitles[index])
+          audioFile.commit()
+        }
       })
   }
 

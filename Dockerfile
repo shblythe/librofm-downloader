@@ -23,12 +23,13 @@ RUN apk add --no-cache \
  && mkdir /var/cache/apk
 
 ENV \
-    # Fail if cont-init scripts exit with non-zero code.
     LIBRO_FM_USERNAME="" \
     LIBRO_FM_PASSWORD="" \
     DRY_RUN="false" \
     VERBOSE="false" \
-    RENAME_CHAPTERS="false"
+    RENAME_CHAPTERS="false" \
+    WRITE_TITLE_TAG="false" \
+    DEV_MODE="false"
 
 WORKDIR /app
 COPY scripts/run.sh ./
