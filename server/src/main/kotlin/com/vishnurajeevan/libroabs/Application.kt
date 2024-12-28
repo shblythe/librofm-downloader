@@ -12,10 +12,16 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.vishnurajeevan.libroabs.libro.LibraryMetadata
 import com.vishnurajeevan.libroabs.libro.LibroApiHandler
 import io.github.kevincianfarini.cardiologist.intervalPulse
-import io.ktor.client.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.server.application.*
-import io.ktor.server.routing.*
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.logging.DEFAULT
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
@@ -46,24 +52,27 @@ class Run : CliktCommand("run") {
   private val dryRun by option("--dry-run", "-n")
     .flag(default = false)
 
+  private val renameChapters by option("--rename-chapters")
+    .flag(default = false)
+
   private val libroFmUsername by option("--libro-fm-username").required()
   private val libroFmPassword by option("--libro-fm-password").required()
 
   private val libroFmApi by lazy {
     LibroApiHandler(
-      dataDir = dataDir,
       client = HttpClient {
         install(Logging) {
           logger = Logger.DEFAULT
           level = if (verbose) LogLevel.BODY else LogLevel.INFO
         }
       },
+      dataDir = dataDir,
       dryRun = dryRun,
       logger = logger
     )
   }
 
-  private val logger :(String) -> Unit = {
+  private val logger: (String) -> Unit = {
     if (verbose) {
       println(it)
     }
@@ -74,6 +83,11 @@ class Run : CliktCommand("run") {
       println("This is a dry run!")
     }
     runBlocking {
+      val dataDir = File(dataDir).apply {
+        if (!exists()) {
+          mkdirs()
+        }
+      }
       val tokenFile = File("$dataDir/token.txt")
       if (!tokenFile.exists()) {
         logger("Token file not found, logging in")
@@ -90,13 +104,22 @@ class Run : CliktCommand("run") {
           processLibrary()
         }
       }
-//    embeddedServer(
-//      factory = Netty,
-//      port = port,
-//      host = "0.0.0.0",
-//      module = { module(libroFmApi) }
-//    )
-//      .start(wait = true)
+      launch {
+        embeddedServer(
+          factory = Netty,
+          port = port,
+          host = "0.0.0.0",
+          module = {
+            routing {
+              post("/update") {
+                call.respondText("Updating!")
+                libroFmApi.fetchLibrary()
+                processLibrary()
+              }
+            }
+          }
+        ).start(wait = true)
+      }
     }
   }
 
@@ -113,19 +136,22 @@ class Run : CliktCommand("run") {
         targetDir.mkdirs()
         val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
         libroFmApi.fetchAudioBook(
-          isbn = book.isbn,
           data = downloadData.parts,
           targetDirectory = targetDir
         )
-      } else {
+
+        if (renameChapters) {
+          libroFmApi.renameChapters(
+            title = book.title,
+            data = downloadData.tracks,
+            targetDirectory = targetDir
+          )
+        }
+      }
+      else {
         logger("skipping ${book.title} as it exists on the filesystem!")
-        libroFmApi.markIsbnAsDownloaded(book.isbn)
       }
     }
   }
 }
 
-fun Application.module(libroApi: LibroApiHandler) {
-  routing {
-  }
-}
