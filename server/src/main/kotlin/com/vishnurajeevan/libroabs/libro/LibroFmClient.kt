@@ -138,7 +138,7 @@ class LibroApiHandler(
     tracks: List<Tracks>,
     targetDirectory: File
   )  = withContext(Dispatchers.IO) {
-    if (tracks.any { it.chapter_title == null }) return@withContext 
+    if (tracks.any { it.chapter_title == null }) return@withContext
 
     val newFilenames = tracks.sortedBy { it.number }
       .map { track ->
