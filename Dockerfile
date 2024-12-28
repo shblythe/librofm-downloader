@@ -29,7 +29,8 @@ ENV \
     DRY_RUN="" \
     DATA_DIR="" \
     MEDIA_DIR="" \
-    VERBOSE=""
+    VERBOSE="" \
+    RENAME_CHAPTERS=""
 
 WORKDIR /app
 COPY scripts/run.sh ./

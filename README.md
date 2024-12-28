@@ -20,4 +20,5 @@ services:
       # extra optional: setting these enables them, dont add them if you dont want them.
       - DRY_RUN=true 
       - VERBOSE=true
+      - RENAME_CHAPTERS=true
 ```
