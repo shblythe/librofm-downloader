@@ -1,14 +1,19 @@
 package com.vishnurajeevan.libroabs.libro
 
 import de.jensklingenberg.ktorfit.Ktorfit
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.utils.io.*
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.get
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -19,10 +24,10 @@ import kotlin.io.path.div
 import kotlin.io.path.outputStream
 
 class LibroApiHandler(
-  private val client: HttpClient,
+  client: HttpClient,
   private val dataDir: String,
   private val dryRun: Boolean,
-  private val logger: (String) -> Unit = {}
+  private val logger: (String) -> Unit = {},
 ) {
   private val ktorfit = Ktorfit.Builder()
     .baseUrl("https://libro.fm/")
@@ -31,7 +36,10 @@ class LibroApiHandler(
         contentType(ContentType.Application.Json)
       }
       install(ContentNegotiation) {
-        json(Json { isLenient = true; ignoreUnknownKeys = true })
+        json(Json {
+          isLenient = true
+          ignoreUnknownKeys = true
+        })
       }
     })
     .build()
@@ -46,24 +54,18 @@ class LibroApiHandler(
   private val authToken by lazy {
     File("$dataDir/token.txt").useLines { it.first() }
   }
-  val downloadedIsbnsFile by lazy { File("$dataDir/downloaded.json") }
-  val downloadedIsbns
-    get() =
-      if (downloadedIsbnsFile.exists()) {
-        Json.decodeFromString<DownloadedIsbns>(downloadedIsbnsFile.readText())
-      } else {
-        DownloadedIsbns(emptyList())
-      }
 
   suspend fun fetchLoginData(username: String, password: String) {
     val tokenData = libroAPI.fetchLoginData(
       LoginRequest(username = username, password = password)
     )
     if (tokenData.access_token != null) {
-      File("$dataDir/token.txt").printWriter().use {
+      val file = File("$dataDir/token.txt")
+      file.printWriter().use {
         it.write(tokenData.access_token!!)
       }
-    } else {
+    }
+    else {
       println("Login failed!")
       throw IllegalArgumentException("failed login!")
     }
@@ -80,11 +82,7 @@ class LibroApiHandler(
     return libroAPI.fetchDownloadMetadata("Bearer $authToken", isbn)
   }
 
-  suspend fun fetchAudioBook(isbn: String, data: List<DownloadPart>, targetDirectory: File) {
-    if (downloadedIsbns.isbns.contains(isbn)) {
-      logger("$isbn has already been downloaded!")
-      return
-    }
+  suspend fun fetchAudioBook(data: List<DownloadPart>, targetDirectory: File) {
     downloadClient.use { httpClient ->
       data.forEachIndexed { index, part ->
         if (!dryRun) {
@@ -114,7 +112,8 @@ class LibroApiHandler(
               if (entry.isDirectory) {
                 // Create directory
                 entryPath.createDirectories()
-              } else {
+              }
+              else {
                 // Ensure parent directory exists
                 entryPath.parent?.createDirectories()
 
@@ -130,21 +129,28 @@ class LibroApiHandler(
           }
           destinationFile.delete()
         }
-        markIsbnAsDownloaded(isbn)
       }
     }
   }
 
-  fun hasIsbnBennDownloaded(isbn: String): Boolean = downloadedIsbns.isbns.contains(isbn)
+  suspend fun renameChapters(
+    title: String,
+    data: List<Tracks>,
+    targetDirectory: File
+  )  = withContext(Dispatchers.IO) {
+    val newFilenames = data.sortedBy { it.number }
+      .map { track ->
+        "${track.number.padToTotal(data.size)} - $title - ${track.chapter_title}"
+      }
+    targetDirectory.listFiles()
+      ?.sortedBy { it.nameWithoutExtension }
+      ?.forEachIndexed({ index, file ->
+        val newFilename = newFilenames[index]
+        file.renameTo(File(targetDirectory, "$newFilename.${file.extension}"))
+      })
+  }
 
-  fun markIsbnAsDownloaded(isbn: String) {
-    logger("marking $isbn as downloaded")
-    val newIsbns = downloadedIsbns.isbns.toMutableList().apply {
-      add(isbn)
-    }
-    val newDownloadedIsbns = downloadedIsbns.copy(
-      isbns = newIsbns
-    )
-    downloadedIsbnsFile.writeText(Json.encodeToString(newDownloadedIsbns))
+  private fun Int.padToTotal(total: Int): String {
+    return toString().padStart(total.toString().length, '0')
   }
 }

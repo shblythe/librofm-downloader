@@ -8,13 +8,13 @@ interface LibroAPI {
     @Body loginRequest: LoginRequest
   ): TokenMetadata
 
-  @GET("api/v7/library")
+  @GET("api/v10/library")
   suspend fun fetchLibrary(
     @Header("Authorization") authToken: String,
     @Query("page") page: Int = 1
   ): LibraryMetadata
 
-  @GET("api/v9/download-manifest")
+  @GET("api/v10/download-manifest")
   suspend fun fetchDownloadMetadata(
     @Header("Authorization") authToken: String,
     @Query("isbn") isbn: String
