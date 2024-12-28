@@ -22,6 +22,9 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
@@ -52,7 +55,14 @@ class Run : CliktCommand("run") {
   private val renameChapters by option("--rename-chapters", envvar = "RENAME_CHAPTERS")
     .flag(default = false)
 
+  private val writeTitleTag by option("--write-title-tag", envvar = "WRITE_TITLE_TAG")
+    .flag(default = false)
+
   private val verbose by option("--verbose", "-v", envvar = "VERBOSE")
+    .flag(default = false)
+
+  // Limits the number of books pulled down to 1
+  private val devMode by option("--dev-mode", "-d", envvar = "DEV_MODE")
     .flag(default = false)
 
   private val libroFmUsername by option("--libro-fm-username", envvar = "LIBRO_FM_USERNAME")
@@ -81,10 +91,13 @@ class Run : CliktCommand("run") {
     }
   }
 
+  private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
   override fun run() {
     if (dryRun) {
       println("This is a dry run!")
     }
+
     runBlocking {
       val dataDir = File(dataDir).apply {
         if (!exists()) {
@@ -107,7 +120,8 @@ class Run : CliktCommand("run") {
           processLibrary()
         }
       }
-      launch {
+
+      serverScope.launch {
         embeddedServer(
           factory = Netty,
           port = port,
@@ -131,7 +145,16 @@ class Run : CliktCommand("run") {
       File("$dataDir/library.json").readText()
     )
 
-    localLibrary.audiobooks.forEach { book ->
+    localLibrary.audiobooks
+      .let {
+        if (devMode) {
+          it.take(1)
+        }
+        else {
+          it
+        }
+      }
+      .forEach { book ->
       val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
 
       if (!targetDir.exists()) {
@@ -147,7 +170,8 @@ class Run : CliktCommand("run") {
           libroFmApi.renameChapters(
             title = book.title,
             tracks = downloadData.tracks,
-            targetDirectory = targetDir
+            targetDirectory = targetDir,
+            writeTitleTag = writeTitleTag
           )
         }
       }
