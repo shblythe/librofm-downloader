@@ -26,11 +26,9 @@ ENV \
     # Fail if cont-init scripts exit with non-zero code.
     LIBRO_FM_USERNAME="" \
     LIBRO_FM_PASSWORD="" \
-    DRY_RUN="" \
-    DATA_DIR="" \
-    MEDIA_DIR="" \
-    VERBOSE="" \
-    RENAME_CHAPTERS=""
+    DRY_RUN="false" \
+    VERBOSE="false" \
+    RENAME_CHAPTERS="false"
 
 WORKDIR /app
 COPY scripts/run.sh ./
