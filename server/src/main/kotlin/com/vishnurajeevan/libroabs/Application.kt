@@ -40,23 +40,26 @@ class Run : CliktCommand("run") {
     .int()
     .default(8080)
 
-  private val verbose by option("--verbose", "-v")
-    .flag(default = false)
-
   private val dataDir by option("--data-dir")
     .default("/data")
 
   private val mediaDir by option("--media-dir")
     .default("/media")
 
-  private val dryRun by option("--dry-run", "-n")
+  private val dryRun by option("--dry-run", "-n", envvar = "DRY_RUN")
     .flag(default = false)
 
-  private val renameChapters by option("--rename-chapters")
+  private val renameChapters by option("--rename-chapters", envvar = "RENAME_CHAPTERS")
     .flag(default = false)
 
-  private val libroFmUsername by option("--libro-fm-username").required()
-  private val libroFmPassword by option("--libro-fm-password").required()
+  private val verbose by option("--verbose", "-v", envvar = "VERBOSE")
+    .flag(default = false)
+
+  private val libroFmUsername by option("--libro-fm-username", envvar = "LIBRO_FM_USERNAME")
+    .required()
+
+  private val libroFmPassword by option("--libro-fm-password", envvar = "LIBRO_FM_PASSWORD")
+    .required()
 
   private val libroFmApi by lazy {
     LibroApiHandler(
