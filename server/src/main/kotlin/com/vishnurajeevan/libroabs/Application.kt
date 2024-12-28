@@ -143,7 +143,7 @@ class Run : CliktCommand("run") {
         if (renameChapters) {
           libroFmApi.renameChapters(
             title = book.title,
-            data = downloadData.tracks,
+            tracks = downloadData.tracks,
             targetDirectory = targetDir
           )
         }

@@ -135,12 +135,14 @@ class LibroApiHandler(
 
   suspend fun renameChapters(
     title: String,
-    data: List<Tracks>,
+    tracks: List<Tracks>,
     targetDirectory: File
   )  = withContext(Dispatchers.IO) {
-    val newFilenames = data.sortedBy { it.number }
+    if (tracks.any { it.chapter_title == null }) return@withContext 
+
+    val newFilenames = tracks.sortedBy { it.number }
       .map { track ->
-        "${track.number.padToTotal(data.size)} - $title - ${track.chapter_title}"
+        "${track.number.padToTotal(tracks.size)} - $title - ${track.chapter_title}"
       }
     targetDirectory.listFiles()
       ?.sortedBy { it.nameWithoutExtension }
