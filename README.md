@@ -10,6 +10,8 @@ enable `RENAME_CHAPTERS` to rename files from `Track - #.mp3` to `### <Book Titl
 
 enable `WRITE_TITLE_TAG` to update each track's ID3 `title` field to `### <Chapter Title>` as provided by libro.fm.
 
+bind a host port to `8080` to access the service's `/update` webhook. This allows you to manually force a refresh (ie: when you just purchased a book).
+
 ```
 services:
   librofm-downloader:
