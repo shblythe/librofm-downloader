@@ -6,6 +6,9 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -29,13 +32,23 @@ class LibroApiHandler(
   client: HttpClient,
   private val dataDir: String,
   private val dryRun: Boolean,
-  private val logger: (String) -> Unit = {},
+  private val lfdLogger: (String) -> Unit = {},
+  verbose: Boolean,
 ) {
   private val ktorfit = Ktorfit.Builder()
     .baseUrl("https://libro.fm/")
     .httpClient(client.config {
       defaultRequest {
         contentType(ContentType.Application.Json)
+      }
+      install(Logging) {
+        logger = object: Logger {
+          override fun log(message: String) {
+            lfdLogger(message)
+          }
+
+        }
+        level = if (verbose) LogLevel.BODY else LogLevel.NONE
       }
       install(ContentNegotiation) {
         json(Json {
@@ -49,6 +62,15 @@ class LibroApiHandler(
   private val downloadClient = client.config {
     install(HttpTimeout) {
       requestTimeoutMillis = 5 * 60 * 1000
+    }
+    install(Logging) {
+      logger = object: Logger {
+        override fun log(message: String) {
+          lfdLogger(message)
+        }
+
+      }
+      level = if (verbose) LogLevel.INFO else LogLevel.NONE
     }
   }
 
@@ -88,7 +110,7 @@ class LibroApiHandler(
     data.forEachIndexed { index, part ->
       if (!dryRun) {
         val url = part.url
-        logger("downloading part ${index + 1}")
+        lfdLogger("downloading part ${index + 1}")
         val destinationFile = File(targetDirectory, "part-$index.zip")
         val response = downloadClient.get(url)
 

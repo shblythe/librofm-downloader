@@ -8,15 +8,12 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.vishnurajeevan.libroabs.libro.LibraryMetadata
 import com.vishnurajeevan.libroabs.libro.LibroApiHandler
 import io.github.kevincianfarini.cardiologist.intervalPulse
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.logging.DEFAULT
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.response.respondText
@@ -30,6 +27,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import java.io.File
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
 fun main(args: Array<String>) {
@@ -48,6 +46,9 @@ class Run : CliktCommand("run") {
 
   private val mediaDir by option("--media-dir")
     .default("/media")
+
+  private val syncInterval by option("--sync-interval", envvar = "SYNC_INTERVAL")
+    .choice("h", "d", "w")
 
   private val dryRun by option("--dry-run", "-n", envvar = "DRY_RUN")
     .flag(default = false)
@@ -71,24 +72,20 @@ class Run : CliktCommand("run") {
   private val libroFmPassword by option("--libro-fm-password", envvar = "LIBRO_FM_PASSWORD")
     .required()
 
-  private val libroFmApi by lazy {
-    LibroApiHandler(
-      client = HttpClient {
-        install(Logging) {
-          logger = Logger.DEFAULT
-          level = if (verbose) LogLevel.BODY else LogLevel.INFO
-        }
-      },
-      dataDir = dataDir,
-      dryRun = dryRun,
-      logger = logger
-    )
-  }
-
-  private val logger: (String) -> Unit = {
+  private val lfdLogger: (String) -> Unit = {
     if (verbose) {
       println(it)
     }
+  }
+
+  private val libroFmApi by lazy {
+    LibroApiHandler(
+      client = HttpClient { },
+      dataDir = dataDir,
+      dryRun = dryRun,
+      verbose = verbose,
+      lfdLogger = lfdLogger
+    )
   }
 
   private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -106,7 +103,7 @@ class Run : CliktCommand("run") {
       }
       val tokenFile = File("$dataDir/token.txt")
       if (!tokenFile.exists()) {
-        logger("Token file not found, logging in")
+        lfdLogger("Token file not found, logging in")
         libroFmApi.fetchLoginData(libroFmUsername, libroFmPassword)
       }
 
@@ -114,11 +111,20 @@ class Run : CliktCommand("run") {
       processLibrary()
 
       launch {
-        Clock.System.intervalPulse(1.hours).beat { scheduled, occurred ->
-          logger("Checking library on pulse!")
-          libroFmApi.fetchLibrary()
-          processLibrary()
+        lfdLogger("Sync Interval: $syncInterval")
+        val syncIntervalTimeUnit = when (syncInterval) {
+          "h" -> 1.hours
+          "d" -> 1.days
+          "w" -> 7.days
+          else -> error("Unhandled sync interval")
         }
+
+        Clock.System.intervalPulse(syncIntervalTimeUnit)
+          .beat { scheduled, occurred ->
+            lfdLogger("Checking library on pulse!")
+            libroFmApi.fetchLibrary()
+            processLibrary()
+          }
       }
 
       serverScope.launch {
@@ -155,30 +161,30 @@ class Run : CliktCommand("run") {
         }
       }
       .forEach { book ->
-      val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
+        val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
 
-      if (!targetDir.exists()) {
-        logger("downloading ${book.title}")
-        targetDir.mkdirs()
-        val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
-        libroFmApi.fetchAudioBook(
-          data = downloadData.parts,
-          targetDirectory = targetDir
-        )
-
-        if (renameChapters) {
-          libroFmApi.renameChapters(
-            title = book.title,
-            tracks = downloadData.tracks,
-            targetDirectory = targetDir,
-            writeTitleTag = writeTitleTag
+        if (!targetDir.exists()) {
+          lfdLogger("downloading ${book.title}")
+          targetDir.mkdirs()
+          val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
+          libroFmApi.fetchAudioBook(
+            data = downloadData.parts,
+            targetDirectory = targetDir
           )
+
+          if (renameChapters) {
+            libroFmApi.renameChapters(
+              title = book.title,
+              tracks = downloadData.tracks,
+              targetDirectory = targetDir,
+              writeTitleTag = writeTitleTag
+            )
+          }
+        }
+        else {
+          lfdLogger("skipping ${book.title} as it exists on the filesystem!")
         }
       }
-      else {
-        logger("skipping ${book.title} as it exists on the filesystem!")
-      }
-    }
   }
 }
 
