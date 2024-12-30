@@ -2,7 +2,13 @@
 
 Small tool for checking your [libro.fm](https://libro.fm) library and downloading new books.
 
-The tool is set to recheck the library every hour and download new books. Books will be skipped if the `Author Name/Book Name` folder already exists, or if the book has been downloaded previously.
+The tool is set to recheck the library every hour and download new books. Books will be skipped if the `Author Name/Book Name` folder already exists.
+
+## Extra Features
+
+enable `RENAME_CHAPTERS` to rename files from `Track - #.mp3` to `### <Book Title> - <Chapter Title>` as provided by libro.fm
+
+enable `WRITE_TITLE_TAG` to update each track's ID3 `title` field to `### <Chapter Title>` as provided by libro.fm.
 
 ```
 services:
