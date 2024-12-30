@@ -85,52 +85,50 @@ class LibroApiHandler(
   }
 
   suspend fun fetchAudioBook(data: List<DownloadPart>, targetDirectory: File) {
-    downloadClient.use { httpClient ->
-      data.forEachIndexed { index, part ->
-        if (!dryRun) {
-          val url = part.url
-          logger("downloading part ${index + 1}")
-          val destinationFile = File(targetDirectory, "part-$index.zip")
-          val response = httpClient.get(url)
+    data.forEachIndexed { index, part ->
+      if (!dryRun) {
+        val url = part.url
+        logger("downloading part ${index + 1}")
+        val destinationFile = File(targetDirectory, "part-$index.zip")
+        val response = downloadClient.get(url)
 
-          val input = response.body<ByteReadChannel>()
-          FileOutputStream(destinationFile).use { output ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        val input = response.body<ByteReadChannel>()
+        FileOutputStream(destinationFile).use { output ->
+          val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
 
-            while (true) {
-              val bytesRead = input.readAvailable(buffer)
-              if (bytesRead == -1) break
+          while (true) {
+            val bytesRead = input.readAvailable(buffer)
+            if (bytesRead == -1) break
 
-              output.write(buffer, 0, bytesRead)
-            }
-            output.flush()
+            output.write(buffer, 0, bytesRead)
           }
-
-          ZipInputStream(destinationFile.inputStream()).use { zipIn ->
-            var entry = zipIn.nextEntry
-            while (entry != null) {
-              val entryPath = targetDirectory.toPath() / entry.name
-
-              if (entry.isDirectory) {
-                // Create directory
-                entryPath.createDirectories()
-              }
-              else {
-                // Ensure parent directory exists
-                entryPath.parent?.createDirectories()
-
-                // Extract file
-                entryPath.outputStream().use { output ->
-                  zipIn.copyTo(output)
-                }
-              }
-
-              // Move to next entry
-              entry = zipIn.nextEntry
-            }
-          }
-          destinationFile.delete()
+          output.flush()
         }
+
+        ZipInputStream(destinationFile.inputStream()).use { zipIn ->
+          var entry = zipIn.nextEntry
+          while (entry != null) {
+            val entryPath = targetDirectory.toPath() / entry.name
+
+            if (entry.isDirectory) {
+              // Create directory
+              entryPath.createDirectories()
+            }
+            else {
+              // Ensure parent directory exists
+              entryPath.parent?.createDirectories()
+
+              // Extract file
+              entryPath.outputStream().use { output ->
+                zipIn.copyTo(output)
+              }
+            }
+
+            // Move to next entry
+            entry = zipIn.nextEntry
+          }
+        }
+        destinationFile.delete()
       }
     }
   }
@@ -140,7 +138,7 @@ class LibroApiHandler(
     tracks: List<Tracks>,
     targetDirectory: File,
     writeTitleTag: Boolean
-  )  = withContext(Dispatchers.IO) {
+  ) = withContext(Dispatchers.IO) {
     if (tracks.any { it.chapter_title == null }) return@withContext
 
     val sortedTracks = tracks.sortedBy { it.number }
