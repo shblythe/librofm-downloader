@@ -92,9 +92,19 @@ class Run : CliktCommand("run") {
   private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
   override fun run() {
-    if (dryRun) {
-      println("This is a dry run!")
-    }
+    println(
+      """
+        Starting up!
+        internal port: $port
+        syncInterval: $syncInterval
+        dryRun: $dryRun
+        renameChapters: $renameChapters
+        writeTitleTag: $writeTitleTag
+        verbose: $verbose
+        libroFmUsername: $libroFmUsername
+        libroFmPassword: ${libroFmPassword.map { "*" }.joinToString("")}
+      """.trimIndent()
+    )
 
     runBlocking {
       val dataDir = File(dataDir).apply {
