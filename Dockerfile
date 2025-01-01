@@ -29,7 +29,8 @@ ENV \
     VERBOSE="false" \
     RENAME_CHAPTERS="false" \
     WRITE_TITLE_TAG="false" \
-    DEV_MODE="false"
+    DEV_MODE="false" \
+    SYNC_INTERVAL="d"
 
 WORKDIR /app
 COPY scripts/run.sh ./
