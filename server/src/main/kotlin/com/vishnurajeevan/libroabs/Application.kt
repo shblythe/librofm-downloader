@@ -49,6 +49,7 @@ class Run : CliktCommand("run") {
 
   private val syncInterval by option("--sync-interval", envvar = "SYNC_INTERVAL")
     .choice("h", "d", "w")
+    .default("d")
 
   private val dryRun by option("--dry-run", "-n", envvar = "DRY_RUN")
     .flag(default = false)
