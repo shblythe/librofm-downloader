@@ -1,5 +1,5 @@
 [versions]
-cardiologist = "0.3.0"
+cardiologist = "0.3.1"
 clikt = "5.0.2"
 jaudiotagger = "3.0.1"
 junit = "4.13.2"
