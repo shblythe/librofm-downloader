@@ -16,10 +16,10 @@ updates:
     registries: "*"
     open-pull-requests-limit: 15
     groups:
-      kotlin-ksp:
+      kotlin:
         patterns:
           - "org.jetbrains.kotlin:*"
-          - "org.jetbrains.kotlin.jvm"
+          - "org.jetbrains.kotlin"
           - "com.google.devtools.ksp"
 registries:
   maven-google:
