@@ -21,6 +21,7 @@ updates:
           - "org.jetbrains.kotlin:*"
           - "org.jetbrains.kotlin"
           - "com.google.devtools.ksp"
+          - "de.jensklingenberg.ktorfit"
 registries:
   maven-google:
     type: "maven-repository"
