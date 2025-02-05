@@ -19,6 +19,7 @@ RUN apk add --no-cache \
       curl \
       openjdk21-jre \
       bash \
+      tini \
  && rm -rf /var/cache/* \
  && mkdir /var/cache/apk
 
@@ -36,4 +37,5 @@ WORKDIR /app
 COPY scripts/run.sh ./
 COPY --from=build /app/server/build/install/server ./
 
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD /app/run.sh
