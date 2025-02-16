@@ -1,10 +1,12 @@
 package com.vishnurajeevan.libroabs.libro
 
-import io.ktor.http.*
 import net.bramp.ffmpeg.FFmpeg
 import net.bramp.ffmpeg.FFmpegExecutor
+import net.bramp.ffmpeg.FFmpegUtils
 import net.bramp.ffmpeg.FFprobe
 import net.bramp.ffmpeg.builder.FFmpegBuilder
+import net.bramp.ffmpeg.progress.Progress
+import net.bramp.ffmpeg.progress.ProgressListener
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -14,12 +16,13 @@ import java.util.concurrent.TimeUnit
 class M4BUtil(
     ffmpegPath: String,
     ffprobePath: String,
+    private val lfdLogger: (String) -> Unit = {},
 ) {
 
     private val ffmpeg = FFmpeg(ffmpegPath)
     private val ffprobe = FFprobe(ffprobePath)
 
-    fun convertBookToM4b(book: Book, targetDirectory: File) {
+    suspend fun convertBookToM4b(book: Book, targetDirectory: File) {
         val newFile = File(targetDirectory, "${book.title}.m4b")
 
         // Download Cover Image
@@ -60,14 +63,28 @@ class M4BUtil(
             .addExtraArgs("-id3v2_version", "3")
             .done()
 
-        val executor = net.bramp.ffmpeg.FFmpegExecutor(ffmpeg, ffprobe)
-        executor.createJob(builder).run()
+        val executor = FFmpegExecutor(ffmpeg, ffprobe)
+        executor.createJob(builder, object : ProgressListener {
+            val durationNs = book.audiobook_info.duration * TimeUnit.SECONDS.toNanos(1)
+            override fun progress(progress: Progress) {
+                val percentage = progress.out_time_ns.toDouble() / durationNs.toDouble();
+                lfdLogger(
+                    String.format(
+                        "[%.0f%%] status:%s time:%s ms speed:%.2fx",
+                        percentage * 100,
+                        progress.status,
+                        FFmpegUtils.toTimecode(progress.out_time_ns, TimeUnit.NANOSECONDS),
+                        progress.speed
+                    )
+                )
+            }
+        }).run()
 
         //cleanup
         listFile.delete()
         metadataFile.delete()
 
-        println("M4B file created: ${newFile.absolutePath}")
+        lfdLogger("M4B file created: ${newFile.absolutePath}")
     }
 
     private fun downloadCoverImage(coverUrl: String, outputFile: File) {
@@ -77,27 +94,10 @@ class M4BUtil(
             URI(fullUrl).toURL().openStream().use { input ->
                 Files.copy(input, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
-            println("Cover image saved to ${outputFile.absolutePath}")
+            lfdLogger("Cover image saved to ${outputFile.absolutePath}")
         } catch (e: Exception) {
-            println("Failed to download cover image: ${e.message}")
+            lfdLogger("Failed to download cover image: ${e.message}")
         }
-    }
-
-    private fun reencodeJpeg(inputCover: File, outputCover: File) {
-        if (!inputCover.exists()) throw IllegalArgumentException("Cover image not found: ${inputCover.absolutePath}")
-
-        val builder = FFmpegBuilder()
-            .setInput(inputCover.absolutePath)
-            .overrideOutputFiles(true)
-            .addOutput(outputCover.absolutePath)
-            .setFormat("mjpeg")
-            .addExtraArgs("-q:v", "2") // High-quality output
-            .done()
-
-        val executor = FFmpegExecutor(ffmpeg)
-        executor.createJob(builder).run()
-
-        println("Cover image re-encoded as JPEG: ${outputCover.absolutePath}")
     }
 
     private fun generateMetadataFile(
