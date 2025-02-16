@@ -10,6 +10,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
+import com.vishnurajeevan.libroabs.libro.Book
 import com.vishnurajeevan.libroabs.libro.LibraryMetadata
 import com.vishnurajeevan.libroabs.libro.LibroApiHandler
 import com.vishnurajeevan.libroabs.libro.M4BUtil
@@ -169,7 +170,13 @@ class Run : CliktCommand("run") {
                             }
                             post("/convertToM4b/{isbn}") {
                                 call.respondText("Starting process!")
-                                call.parameters["isbn"]?.let { convertBookToM4b(it) }
+                                call.parameters["isbn"]?.let { isbn ->
+                                    if (isbn == "all") {
+                                        convertAllBooksToM4b()
+                                    } else {
+                                        convertBookToM4b(isbn)
+                                    }
+                                }
                             }
                         }
                     }
@@ -225,18 +232,41 @@ class Run : CliktCommand("run") {
             }
     }
 
-    private suspend fun convertBookToM4b(isbn: String) {
+    private suspend fun convertAllBooksToM4b() {
         val localLibrary = getLibrary()
 
+        localLibrary.audiobooks
+            .let {
+                if (devMode) {
+                    it.take(1)
+                } else {
+                    it
+                }
+            }
+            .forEach { book ->
+                convertBookToM4b(book)
+            }
+    }
+
+    private suspend fun convertBookToM4b(isbn: String) {
+        val localLibrary = getLibrary()
         val book = localLibrary.audiobooks.find { it.isbn == isbn }
         if (book == null) {
             lfdLogger("Book with isbn $isbn not found!")
-            return
+        } else {
+            convertBookToM4b(book)
         }
+    }
 
+    private suspend fun convertBookToM4b(book: Book) {
         val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
         if (!targetDir.exists()) {
-            lfdLogger("Book with isbn $isbn is not downloaded yet!")
+            lfdLogger("Book ${book.title} is not downloaded yet!")
+            return
+        }
+        val targetFile = File("$mediaDir/${book.authors.first()}/${book.title}/${book.title}.m4b")
+        if (targetFile.exists()) {
+            lfdLogger("Skipping ${book.title} as it's already converted!")
             return
         }
         lfdLogger("Converting ${book.title} from mp3 to m4b.")
