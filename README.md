@@ -10,13 +10,14 @@ The tool is set to recheck the library every day and download new books. Books w
 Enable `RENAME_CHAPTERS` to rename files from `Track - #.mp3` to `### <Book Title> - <Chapter Title>` as provided by libro.fm
 Additionally, if you enable `WRITE_TITLE_TAG`, each track's ID3 `title` field will be set to `### <Chapter Title>` as provided by libro.fm.
 
-### Convert to M4B
+### Formats
+By default, libro.fm only supports downloading "chapterized" MP3 files i.e. every chapter is its own file.
+When setting `FORMAT` or passing the `--format` flag you can control what format should be used
+Formats supported: `mp3`, `m4b`, `both`
 
-M4B is an audio book file format that is supported by many players. By default, libro.fm on;y supports downloading "chapterized" MP3 files i.e. every chapter is its own file.
-That's not very convenient and also not supported by tons of players.
-If you enable `CONVERT_TO_M4B` or pass the `--convert-to-m4b` flag, a separate m4b file will be generated with all the available metadata (e.g. chapter names and a book cover).
-The MP3 files are not deleted when the process is completed.
-Note: this process will take a little extra time to complete.
+- `mp3` (default): Only downloads the "chapterized" MP3 files
+- `m4b`: Downloads the "chapterized" MP3 files, then merges them into a single `m4b` file __and deletes the MP3 files__.
+- `both`: Downloads the "chapterized" MP3 files, and creates a single `m4b` file out of them. No files are deleted.
 
 When running this tool separately (i.e. not using the provided docker container), please ensure `ffmpeg` is installed on your system.
 You can pass the paths for `ffmpeg` and `ffprobe` to the tool as well using the `--ffmpeg-path <path>` and `--ffprobe-path <path>` options.
@@ -27,7 +28,10 @@ Bind a host port to `8080` to access the services.
 
 Endpoints:
 - `/update` allows you to manually force a refresh (ie: when you just purchased a book).
-- `/convertToM4b/{isbn}` allows you to selectively convert audiobooks from MP3 to M4B by passing the book's ISBN. If you pass `all` it will convert ALL books. Note: Books that already have a `.m4b` file will be skipped.
+- `/convertToM4b/{isbn}` allows you to selectively convert audiobooks from MP3 to M4B by passing the book's ISBN. 
+  - If you pass `all` it will convert ALL books. 
+  - Note: Books that already have a `.m4b` file will be skipped.
+  - You can optionally pass the `?overwrite=true` flag to allow existing m4b files to be overwritten
 
 ### Docker Compose Example
 ```

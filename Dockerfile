@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 eclipse-temurin:21-alpine AS build
+FROM eclipse-temurin:21-alpine AS build
 ENV GRADLE_OPTS="-Dorg.gradle.daemon=false -Dkotlin.incremental=true -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
 WORKDIR /app
 
@@ -37,6 +37,7 @@ ENV \
     LIBRO_FM_PASSWORD="" \
     DRY_RUN="false" \
     VERBOSE="false" \
+    FORMAT="MP3" \
     RENAME_CHAPTERS="false" \
     WRITE_TITLE_TAG="false" \
     DEV_MODE="false" \
