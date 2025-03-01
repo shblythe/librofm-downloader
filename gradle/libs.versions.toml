@@ -1,6 +1,7 @@
 [versions]
 cardiologist = "0.3.1"
 clikt = "5.0.3"
+ffmpeg = "0.8.0"
 jaudiotagger = "3.0.1"
 junit = "4.13.2"
 ksp = "2.1.10-1.0.29"
@@ -10,11 +11,11 @@ kotlinxIo = "0.6.0"
 ktor = "3.0.0"
 ktorfit = "2.2.0"
 logback = "1.5.16"
-ffmpeg = "0.8.0"
 
 [libraries]
 cardiologist = { module = "io.github.kevincianfarini.cardiologist:cardiologist", version.ref = "cardiologist" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+ffmpeg = { module = "net.bramp.ffmpeg:ffmpeg", version.ref = "ffmpeg" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version.ref = "jaudiotagger" }
@@ -29,7 +30,6 @@ ktor-server-netty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "k
 ktor-server-tests = { module = "io.ktor:ktor-server-tests-jvm", version.ref = "ktor" }
 ktor-serialization-kotlinx = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-ffmpeg = { module = "net.bramp.ffmpeg:ffmpeg", version.ref = "ffmpeg" }
 
 ktorfit-lib = { module = "de.jensklingenberg.ktorfit:ktorfit-lib", version.ref = "ktorfit" }
 ktorfit-call = { module = "de.jensklingenberg.ktorfit:ktorfit-converters-call", version.ref = "ktorfit" }
