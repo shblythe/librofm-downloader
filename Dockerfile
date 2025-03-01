@@ -25,10 +25,10 @@ FROM eclipse-temurin:21-jre-alpine AS runtime
 LABEL maintainer="Vishnu Rajeevan <github@vishnu.email>"
 
 RUN apk add --no-cache \
-      curl \
       bash \
-      tini \
+      curl \
       ffmpeg \
+      tini \
  && rm -rf /var/cache/* \
  && mkdir /var/cache/apk
 

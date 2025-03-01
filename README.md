@@ -30,7 +30,7 @@ Endpoints:
 - `/update` allows you to manually force a refresh (ie: when you just purchased a book).
 - `/convertToM4b/{isbn}` allows you to selectively convert audiobooks from MP3 to M4B by passing the book's ISBN. 
   - If you pass `all` it will convert ALL books. 
-  - Note: Books that already have a `.m4b` file will be skipped.
+  - Note: Books that already have a `.m4b` file will be skipped by default.
   - You can optionally pass the `?overwrite=true` flag to allow existing m4b files to be overwritten
 
 ### Docker Compose Example
