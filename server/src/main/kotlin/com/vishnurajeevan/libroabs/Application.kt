@@ -169,11 +169,12 @@ class Run : CliktCommand("run") {
                                 processLibrary()
                             }
                             post("/convertToM4b/{isbn}") {
-                                call.respondText("Starting process!")
                                 call.parameters["isbn"]?.let { isbn ->
                                     if (isbn == "all") {
+                                        call.respondText("Starting conversion process for all books in the library")
                                         convertAllBooksToM4b()
                                     } else {
+                                        call.respondText("Starting conversion process for $isbn")
                                         convertBookToM4b(isbn)
                                     }
                                 }
