@@ -165,15 +165,9 @@ class LibroApiHandler(
 
     val sortedTracks = tracks.sortedBy { it.number }
 
-    val newFilenames = sortedTracks
-      .map { track ->
-        "${track.number.padToTotal(tracks.size)} - $title - ${track.chapter_title}"
-      }
+    val newFilenames = createFilenames(sortedTracks, title)
 
-    val trackTitles = sortedTracks
-      .map { track ->
-        "${track.number.padToTotal(tracks.size)} - ${track.chapter_title}"
-      }
+    val trackTitles = createTrackTitles(sortedTracks)
 
     targetDirectory.listFiles()
       ?.sortedBy { it.nameWithoutExtension }
@@ -194,9 +188,5 @@ class LibroApiHandler(
   suspend fun deleteMp3Files(targetDirectory: File) = withContext(Dispatchers.IO) {
     targetDirectory.listFiles { file -> file.extension == "mp3" }
         ?.forEach { it.delete() }
-  }
-
-  private fun Int.padToTotal(total: Int): String {
-    return toString().padStart(total.toString().length, '0')
   }
 }
