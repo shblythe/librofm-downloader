@@ -5,8 +5,11 @@ import net.bramp.ffmpeg.FFmpegExecutor
 import net.bramp.ffmpeg.FFmpegUtils
 import net.bramp.ffmpeg.FFprobe
 import net.bramp.ffmpeg.builder.FFmpegBuilder
+import net.bramp.ffmpeg.probe.FFmpegFormat
+import net.bramp.ffmpeg.probe.FFmpegProbeResult
 import net.bramp.ffmpeg.progress.Progress
 import net.bramp.ffmpeg.progress.ProgressListener
+import java.io.BufferedWriter
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -22,7 +25,7 @@ class M4BUtil(
   private val ffmpeg = FFmpeg(ffmpegPath)
   private val ffprobe = FFprobe(ffprobePath)
 
-  suspend fun convertBookToM4b(book: Book, targetDirectory: File) {
+  suspend fun convertBookToM4b(book: Book, tracks: List<Tracks>, targetDirectory: File) {
     val newFile = File(targetDirectory, "${book.title}.m4b")
 
     // Download Cover Image
@@ -34,7 +37,7 @@ class M4BUtil(
         ?: emptyList()
 
     val metadataFile = File(targetDirectory, "metadata.txt")
-    generateMetadataFile(book, chapterFiles, metadataFile)
+    generateMetadataFile(book, tracks, chapterFiles, metadataFile)
 
     // Create a list file to handle spaces in filenames
     val listFile = File(targetDirectory, "input_list.txt").apply {
@@ -102,6 +105,7 @@ class M4BUtil(
 
   private fun generateMetadataFile(
     book: Book,
+    tracks: List<Tracks>,
     chapterFiles: List<File>,
     outputFile: File,
   ) {
@@ -115,43 +119,66 @@ class M4BUtil(
     val description = book.description
     val seriesNum = book.series_num
 
-
     val chapters = mutableListOf<Chapter>()
     var startTimeMs = 0L
 
     chapterFiles.forEachIndexed { index, file ->
-      val durationMs = getMp3Duration(file)
+      val fileInfo = getFileInfo(file)
+      val durationMs = getMp3Duration(fileInfo.format)
       val endTimeMs = startTimeMs + durationMs
-      chapters.add(Chapter("Chapter ${index + 1}", startTimeMs, endTimeMs))
+
+      // Use either the title from the API, or from the file, or fall back to a generic "Chapter X"
+      val chapterTitle = tracks[index].chapter_title?.takeIf { it.isNotBlank() }
+        ?: fileInfo.format.tags?.get("title")?.takeIf { it.isNotBlank() }
+        ?: "Chapter ${index + 1}"
+      chapters.add(Chapter(chapterTitle, startTimeMs, endTimeMs))
       startTimeMs = endTimeMs
     }
 
+    val metadataMap = mapOf(
+      "title" to title,
+      "artist" to author,
+      "album" to "${title}${series?.let { " ($it Book ${seriesNum ?: "X"})" } ?: ""}",
+      "genre" to genres.joinToString(", "),
+      "date" to publicationDate.substring(0, 4),
+      "publisher" to publisher,
+      "comment" to description.replace("\n", " ")
+    )
+
     outputFile.bufferedWriter().use { writer ->
       writer.write(";FFMETADATA1\n")
-      writer.write("title=\"${title}\"\n")
-      writer.write("artist=\"${author}\"\n")
-      writer.write("album=\"${title}${series?.let { " ($it Book ${seriesNum ?: "X"})" } ?: ""}\"\n")
-      writer.write("genre=\"${genres.joinToString(", ")}\"\n")
-      writer.write("date=\"${publicationDate.substring(0, 4)}\"\n")
-      writer.write("publisher=\"${publisher}\"\n")
-      writer.write("comment=\"${description.replace("\n", " ")}\"\n\n")
-
+      writeEscapedMetaDataToFile(metadataMap, writer)
+      writer.newLine()
       chapters.forEach { chapter ->
         writer.write("[CHAPTER]\n")
         writer.write("TIMEBASE=1/1000\n")
         writer.write("START=${chapter.startTimeMs}\n")
         writer.write("END=${chapter.endTimeMs}\n")
-        writer.write("title=\"${chapter.title}\"\n\n")
+        writer.write("title=\"${escapeMetadataValue(chapter.title)}\"\n")
+        writer.newLine()
       }
     }
   }
 
-  private fun getMp3Duration(file: File): Long {
-    val probeResult = ffprobe.probe(file.absolutePath)
-    val format = probeResult.format
+  private fun getFileInfo(file: File): FFmpegProbeResult {
+    return ffprobe.probe(file.absolutePath)
+  }
+
+  private fun getMp3Duration(format: FFmpegFormat): Long {
     return TimeUnit.MILLISECONDS.convert(format.duration.toLong(), TimeUnit.SECONDS)
   }
-}
+
   private fun escapeForInputList(path: String): String {
     return "file '${path.replace("'", "'\\''")}'\n"
   }
+
+  private fun writeEscapedMetaDataToFile(metadata: Map<String, String>, writer: BufferedWriter) {
+    metadata.forEach { (key, value) ->
+      writer.write("$key=\"${escapeMetadataValue(value)}\"\n")
+    }
+  }
+
+  private fun escapeMetadataValue(value: String): String {
+    return value.replace("\"", "\\\"").trim()  // Replace " with ' and trim spaces
+  }
+}

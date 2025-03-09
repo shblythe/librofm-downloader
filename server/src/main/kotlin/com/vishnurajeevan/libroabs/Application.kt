@@ -276,12 +276,13 @@ class Run : CliktCommand("run") {
 
   private suspend fun convertBookToM4b(book: Book, overwrite: Boolean = false) {
     val targetDir = targetDir(book)
+    var downloadMetaData: DownloadMetadata? = null
 
     // Check that book is downloaded and Mp3s are present
     if (!targetDir.exists()) {
       lfdLogger("Book ${book.title} is not downloaded yet!")
       targetDir.mkdirs()
-      downloadBook(book, targetDir)
+      downloadMetaData = downloadBook(book, targetDir)
     }
 
     if (!overwrite) {
@@ -296,11 +297,15 @@ class Run : CliktCommand("run") {
       targetDir.listFiles { file -> file.extension == "mp3" }
     if (chapterFiles == null || chapterFiles.isEmpty()) {
       lfdLogger("Book ${book.title} does not have mp3 files downloaded. Downloading the book again.")
-      downloadBook(book, targetDir)
+      downloadMetaData = downloadBook(book, targetDir)
+    }
+
+    if (downloadMetaData == null) {
+      downloadMetaData = libroFmApi.fetchDownloadMetadata(book.isbn)
     }
 
     lfdLogger("Converting ${book.title} from mp3 to m4b.")
-    m4bUtil.convertBookToM4b(book, targetDir)
+    m4bUtil.convertBookToM4b(book, downloadMetaData.tracks, targetDir)
 
     if (format == Format.M4B) {
       lfdLogger("Deleting obsolete mp3 files for ${book.title}")
