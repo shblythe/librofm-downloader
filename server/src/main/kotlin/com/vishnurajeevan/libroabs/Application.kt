@@ -218,11 +218,7 @@ class Run : CliktCommand("run") {
         if (!targetDir.exists()) {
           lfdLogger("downloading ${book.title}")
           targetDir.mkdirs()
-          val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
-          libroFmApi.fetchAudioBook(
-            data = downloadData.parts,
-            targetDirectory = targetDir
-          )
+          val downloadData = downloadBook(book, targetDir)
 
           if (renameChapters) {
             libroFmApi.renameChapters(
@@ -240,6 +236,18 @@ class Run : CliktCommand("run") {
           lfdLogger("skipping ${book.title} as it exists on the filesystem!")
         }
       }
+  }
+
+  private suspend fun downloadBook(
+    book: Book,
+    targetDir: File
+  ): DownloadMetadata {
+    val downloadData = libroFmApi.fetchDownloadMetadata(book.isbn)
+    libroFmApi.fetchAudioBook(
+      data = downloadData.parts,
+      targetDirectory = targetDir
+    )
+    return downloadData
   }
 
   private suspend fun convertAllBooksToM4b(overwrite: Boolean = false) {
@@ -270,17 +278,27 @@ class Run : CliktCommand("run") {
 
   private suspend fun convertBookToM4b(book: Book, overwrite: Boolean = false) {
     val targetDir = targetDir(book)
+
+    // Check that book is downloaded and Mp3s are present
     if (!targetDir.exists()) {
       lfdLogger("Book ${book.title} is not downloaded yet!")
-      return
+      targetDir.mkdirs()
+      downloadBook(book, targetDir)
     }
 
-    if(!overwrite) {
-      val targetFile = File("$mediaDir/${book.authors.first()}/${book.title}/${book.title}.m4b")
+    if (!overwrite) {
+      val targetFile = targetDir.combineSafe("${book.title}.m4b")
       if (targetFile.exists()) {
         lfdLogger("Skipping ${book.title} as it's already converted!")
         return
       }
+    }
+
+    val chapterFiles =
+      targetDir.listFiles { file -> file.extension == "mp3" }
+    if (chapterFiles == null || chapterFiles.isEmpty()) {
+      lfdLogger("Book ${book.title} does not have mp3 files downloaded. Downloading the book again.")
+      downloadBook(book, targetDir)
     }
 
     lfdLogger("Converting ${book.title} from mp3 to m4b.")
