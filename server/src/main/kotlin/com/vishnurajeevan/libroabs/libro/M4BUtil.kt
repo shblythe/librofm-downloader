@@ -41,7 +41,7 @@ class M4BUtil(
       bufferedWriter().use { writer ->
         chapterFiles.forEach { file ->
           if (!file.exists()) throw IllegalArgumentException("MP3 file not found: ${file.absolutePath}")
-          writer.write("file '${file.absolutePath}'\n")
+          writer.write(escapeForInputList(file.absolutePath))
         }
       }
     }
@@ -152,3 +152,6 @@ class M4BUtil(
     return TimeUnit.MILLISECONDS.convert(format.duration.toLong(), TimeUnit.SECONDS)
   }
 }
+  private fun escapeForInputList(path: String): String {
+    return "file '${path.replace("'", "'\\''")}'\n"
+  }
