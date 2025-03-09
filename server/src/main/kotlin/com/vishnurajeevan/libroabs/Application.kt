@@ -213,7 +213,7 @@ class Run : CliktCommand("run") {
         }
       }
       .forEach { book ->
-        val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
+        val targetDir = targetDir(book)
 
         if (!targetDir.exists()) {
           lfdLogger("downloading ${book.title}")
@@ -269,7 +269,7 @@ class Run : CliktCommand("run") {
   }
 
   private suspend fun convertBookToM4b(book: Book, overwrite: Boolean = false) {
-    val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
+    val targetDir = targetDir(book)
     if (!targetDir.exists()) {
       lfdLogger("Book ${book.title} is not downloaded yet!")
       return
@@ -290,6 +290,11 @@ class Run : CliktCommand("run") {
       lfdLogger("Deleting obsolete mp3 files for ${book.title}")
       libroFmApi.deleteMp3Files(targetDir)
     }
+  }
+
+  private fun targetDir(book: Book): File {
+    val targetDir = File("$mediaDir/${book.authors.first()}/${book.title}")
+    return targetDir
   }
 }
 
