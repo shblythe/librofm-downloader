@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LoginRequest @OptIn(ExperimentalSerializationApi::class) constructor(
-    @EncodeDefault val grant_type: String = "password",
-    val username: String,
-    val password: String
+  @EncodeDefault val grant_type: String = "password",
+  val username: String,
+  val password: String
 )
