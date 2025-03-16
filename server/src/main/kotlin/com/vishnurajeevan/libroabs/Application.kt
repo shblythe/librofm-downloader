@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
+import net.bramp.ffmpeg.FFmpeg
+import net.bramp.ffmpeg.FFmpegExecutor
+import net.bramp.ffmpeg.FFprobe
 import java.io.File
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -35,12 +38,6 @@ fun main(args: Array<String>) {
   NoOpCliktCommand(name = "librofm-abs")
     .subcommands(Run())
     .main(args)
-}
-
-enum class Format {
-  MP3,
-  M4B,
-  Both
 }
 
 class Run : CliktCommand("run") {
@@ -67,9 +64,9 @@ class Run : CliktCommand("run") {
   private val writeTitleTag by option("--write-title-tag", envvar = "WRITE_TITLE_TAG")
     .flag(default = false)
 
-  private val format: Format by option("--format", envvar = "FORMAT")
-    .enum<Format>()
-    .default(Format.MP3)
+  private val format: BookFormat by option("--format", envvar = "FORMAT")
+    .enum<BookFormat>()
+    .default(BookFormat.MP3)
 
   private val ffmpegPath by option("--ffmpeg-path")
     .default("/usr/bin/ffmpeg")
@@ -107,7 +104,10 @@ class Run : CliktCommand("run") {
   }
 
   private val m4bUtil by lazy {
-    M4BUtil(ffmpegPath, ffprobePath)
+    M4BUtil(
+      ffprobePath = ffprobePath,
+      executor = FFmpegExecutor(FFmpeg(ffmpegPath), FFprobe(ffprobePath))
+    )
   }
 
   private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -155,7 +155,7 @@ class Run : CliktCommand("run") {
         }
 
         Clock.System.intervalPulse(syncIntervalTimeUnit)
-          .beat { scheduled, occurred ->
+          .beat { _, _ ->
             lfdLogger("Checking library on pulse!")
             libroFmApi.fetchLibrary()
             processLibrary()
@@ -226,7 +226,7 @@ class Run : CliktCommand("run") {
               writeTitleTag = writeTitleTag
             )
           }
-          if (format == Format.M4B || format == Format.Both) {
+          if (format == BookFormat.M4B || format == BookFormat.Both) {
             lfdLogger("Converting ${book.title} from mp3 to m4b.")
             convertBookToM4b(book)
           }
@@ -307,7 +307,7 @@ class Run : CliktCommand("run") {
     lfdLogger("Converting ${book.title} from mp3 to m4b.")
     m4bUtil.convertBookToM4b(book, downloadMetaData.tracks, targetDir)
 
-    if (format == Format.M4B) {
+    if (format == BookFormat.M4B) {
       lfdLogger("Deleting obsolete mp3 files for ${book.title}")
       libroFmApi.deleteMp3Files(targetDir)
     }

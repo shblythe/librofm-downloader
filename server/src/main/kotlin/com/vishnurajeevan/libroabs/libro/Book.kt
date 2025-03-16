@@ -28,6 +28,7 @@ data class BookInfo(
 data class Genre(
   val name: String
 )
+
 @Serializable
 data class Chapter(
   val title: String,

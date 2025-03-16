@@ -1,6 +1,5 @@
 package com.vishnurajeevan.libroabs.libro
 
-import net.bramp.ffmpeg.FFmpeg
 import net.bramp.ffmpeg.FFmpegExecutor
 import net.bramp.ffmpeg.FFmpegUtils
 import net.bramp.ffmpeg.FFprobe
@@ -17,12 +16,11 @@ import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 
 class M4BUtil(
-  ffmpegPath: String,
   ffprobePath: String,
+  private val executor: FFmpegExecutor,
   private val lfdLogger: (String) -> Unit = {},
 ) {
 
-  private val ffmpeg = FFmpeg(ffmpegPath)
   private val ffprobe = FFprobe(ffprobePath)
 
   suspend fun convertBookToM4b(book: Book, tracks: List<Tracks>, targetDirectory: File) {
@@ -66,7 +64,6 @@ class M4BUtil(
       .addExtraArgs("-id3v2_version", "3")
       .done()
 
-    val executor = FFmpegExecutor(ffmpeg, ffprobe)
     executor.createJob(builder, object : ProgressListener {
       val durationNs = book.audiobook_info.duration * TimeUnit.SECONDS.toNanos(1)
       override fun progress(progress: Progress) {
